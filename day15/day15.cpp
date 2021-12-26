@@ -1,12 +1,16 @@
 #include <iostream>
 #include <vector>
-#include <set>
+#include <queue>
 #include <limits>
 
 struct Node {
   uint16_t value, row, col;
   Node* prev = nullptr;
   uint16_t dist = std::numeric_limits<uint16_t>::max();
+
+  bool operator<(const Node& other) const {
+    return other.dist < dist;
+  }
 };
 
 using Cave = std::vector<std::vector<uint16_t>>;
@@ -30,34 +34,29 @@ static uint16_t path(Cave& cave, uint8_t tiles) {
   }
 
 
-  std::set<Node*> nodes;
-
-  for (uint16_t i = 0; i < size; i++)
-    for (uint16_t j = 0; j < size; j++)
-      nodes.insert(&graph[i][j]);
+  std::priority_queue<Node> nodes;
 
   graph[0][0].dist = 0;
+  nodes.push(graph[0][0]);
 
   while (!nodes.empty()) {
-    uint16_t dist = std::numeric_limits<uint16_t>::max();
-    Node* next = nullptr;
-    for (auto* n : nodes)
-      if (n->dist < dist) {
-        dist = n->dist;
-        next = n;
-      }
-    nodes.erase(next);
-    if (next == &graph[size - 1][size - 1])
+    Node next = nodes.top();
+    nodes.pop();
+
+    if (next.row == size - 1 && next.col == size - 1)
       break;
-    
+
     for (int16_t i = -1; i <= 1; i++)
       for (int16_t j = -1; j <= 1; j++) {
-        if ((next->row != 0 || i != -1) && (next->col != 0 || j != -1) && (next->row != size - 1 || i != 1) && (next->col != size - 1 || j != 1) && (std::abs(i + j) == 1)) {
-          auto& neighbor = graph[next->row + i][next->col + j];
-          uint16_t alt = next->dist + neighbor.value;
+        if ((next.row != 0 || i != -1) && (next.col != 0 || j != -1) && (next.row != size - 1 || i != 1) && (next.col != size - 1 || j != 1) && (std::abs(i + j) == 1)) {
+          auto& neighbor = graph[next.row + i][next.col + j];
+          uint16_t alt = next.dist + neighbor.value;
           if (alt < neighbor.dist) {
             neighbor.dist = alt;
-            neighbor.prev = next;
+            neighbor.prev = &graph[next.row][next.col];
+            // Push updated node. We don't need to think about old nodes
+            // since they will be later in queue and never come up
+            nodes.push(neighbor);
           }
         }
       }
