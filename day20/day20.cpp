@@ -1,12 +1,12 @@
 #include <iostream>
-#include <map>
-#include <limits>
+#include <set>
 
 using Pos = std::pair<int16_t, int16_t>;
+using Grid = std::set<Pos>;
 
 struct Image {
   std::string algo;
-  std::map<Pos, char> grid;
+  Grid grid;
   int16_t start, end, part1, part2;
   uint8_t step = 0;
 
@@ -14,18 +14,6 @@ struct Image {
     if (algo.front() == '.')
       return '0';
     return step % 2 == 0 ? '0' : '1';
-  }
-
-  void growBorder() {
-    start--;
-    end++;
-    char c = border();
-    for (int16_t i = start; i <= end; i++) {
-      grid[std::make_pair(start, i)] = c;
-      grid[std::make_pair(i, start)] = c;
-      grid[std::make_pair(end, i)] = c;
-      grid[std::make_pair(i, end)] = c;
-    }
   }
 
   void parse() {
@@ -37,30 +25,33 @@ struct Image {
     std::cin >> algo;
     while (std::cin >> line) {
       for (uint16_t col = 0; col < line.size(); col++)
-        grid[std::make_pair(end, col)] = line[col] == '#' ? '1' : '0';
+        if (line[col] == '#')
+          grid.insert(std::make_pair(end, col));
       end++;
     }
     end--;
   }
 
   uint16_t litCount() {
-    uint16_t count = 0;
-    for (auto& pair : grid)
-      count += pair.second == '1';
-    return count;
+    return grid.size();
   }
 
   char get(int16_t row, int16_t col) {
-    Pos p = std::make_pair(row, col);
-    if (grid.count(p))
-      return grid[p];
-    return border();
+    if (row < start || row > end || col < start || col > end)
+      return border();
+
+    if (grid.count(std::make_pair(row, col)))
+      return '1';
+    return '0';
   }
 
   void print() {
     for (int16_t i = start; i <= end; i++) {
       for (int16_t j = start; j <= end; j++)
-        std::cout << (grid[std::make_pair(i, j)] == '1' ? '#' : '.');
+        if (grid.count(std::make_pair(i, j)))
+          std::cout << '#';
+        else
+          std::cout << '.';
       std::cout << '\n';
     }
     std::cout << '\n';
@@ -78,19 +69,17 @@ struct Image {
 
 
   void run() {
-    std::map<Pos, char> next;
+    Grid next;
 
-    growBorder();
-
-    for (auto& pair : grid) {
-      uint16_t row = pair.first.first;
-      uint16_t col = pair.first.second;
-      for (int16_t i = -1; i <= 1; i++)
-        for (int16_t j = -1; j <= 1; j++)
-          next[std::make_pair(row + i, col + j)] = willBeLit(row + i, col + j) ? '1' : '0';
-    }
+    for (int16_t row = start - 1; row <= end + 1; row++)
+      for (int16_t col = start - 1; col <= end + 1; col++)
+        if (willBeLit(row, col))
+          next.insert(std::make_pair(row, col));
 
     grid = next;
+
+    start--;
+    end++;
 
     step++;
 
