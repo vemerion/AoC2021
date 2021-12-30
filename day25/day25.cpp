@@ -1,19 +1,20 @@
 #include <iostream>
-#include <map>
+#include <vector>
 #include <array>
 
 using Pos = std::pair<uint8_t, uint8_t>;
-using Grid = std::map<Pos, char>;
+using Grid = std::vector<std::vector<char>>;
 
-static Pos move(Grid& grid, Pos start, char c, uint8_t rows, uint8_t cols) {
+static Pos move(Grid& grid, Pos start) {
   Pos p;
+  char c = grid[start.first][start.second];
   if (c == '>') {
-    p = std::make_pair(start.first, start.second == cols - 1 ? 0 : start.second + 1);
+    p = std::make_pair(start.first, start.second == grid[start.first].size() - 1 ? 0 : start.second + 1);
   } else if (c == 'v') {
-    p = std::make_pair(start.first == rows - 1 ? 0 : start.first + 1, start.second);
+    p = std::make_pair(start.first == grid.size() - 1 ? 0 : start.first + 1, start.second);
   }
 
-  if (grid.count(p))
+  if (grid[p.first][p.second] != '.')
     return start;
 
   return p;
@@ -21,23 +22,25 @@ static Pos move(Grid& grid, Pos start, char c, uint8_t rows, uint8_t cols) {
 
 static constexpr std::array<char, 2> CUCUMBERS = { '>', 'v' };
 
-static uint16_t simulate(Grid& grid, uint8_t rows, uint8_t cols) {
+static uint16_t simulate(Grid& grid) {
   Grid prev, next;
   uint16_t steps = 0;
+
+  next = grid;
 
   do {
     prev = grid;
     for (char c : CUCUMBERS) {
-      for (auto& pair : grid) {
-        if (pair.second == c) {
-          Pos p = move(grid, pair.first, pair.second, rows, cols);
-          next.emplace(p, pair.second);
-        } else {
-          next.emplace(pair.first, pair.second);
+      for (uint8_t row = 0; row < grid.size(); row++) {
+        for (uint8_t col = 0; col < grid[row].size(); col++) {
+          if (grid[row][col] == c) {
+            Pos p = move(grid, std::make_pair(row, col));
+            next[row][col] = '.';
+            next[p.first][p.second] = c;
+          }
         }
       }
       grid = next;
-      next.clear();
     }
     steps++;
   } while (prev != grid);
@@ -48,17 +51,17 @@ static uint16_t simulate(Grid& grid, uint8_t rows, uint8_t cols) {
 int main() {
   Grid grid;
   std::string line;
-  uint8_t row, col;
+  uint8_t row = 0;
 
   row = 0;
 
   while (std::cin >> line) {
-    for (col = 0; col < line.size(); col++)
-      if (line[col] != '.')
-        grid.emplace(std::make_pair(row, col), line[col]);
+    grid.push_back(std::vector<char>{});
+    for (uint8_t col = 0; col < line.size(); col++)
+      grid.back().push_back(line[col]);
     row++;
   }
 
-  std::cout << "Result = " << simulate(grid, row, col) << '\n';
+  std::cout << "Result = " << simulate(grid) << '\n';
   return 0;
 }
